@@ -1,6 +1,11 @@
 version: '2'
 volumes:
     config:
+
+    influx:
+    dashboard:
+
+    duplicati:
 services:
   homeassistant:
     build: homeassistant
@@ -8,7 +13,7 @@ services:
       - 80:8123
     privileged: true
     volumes:
-      - 'config:/config'
+      - config:/config
     restart: always
     devices:
       - "/dev:/dev"
@@ -24,6 +29,34 @@ services:
     ports:
       - "8080:3218"
     volumes:
-      - 'config:/hass-config'
+      - config:/hass-config
     environment:
       - HC_BASEPATH=/hass-config
+  duplicati:
+      image: linuxserver/duplicati:latest
+      environment:
+        PUID: "0"
+        PGID: "0"
+        CLI_ARGS: --webservice-interface=any
+      ports:
+        - 8200:8200/tcp
+      volumes:
+        - duplicati:/config
+        - config:/source/config
+        - influx:/source/influx
+        - dashboard:/source/dashboard
+  dashboard:
+    image: balenablocks/dashboard:raspberrypi3
+    restart: always
+    volumes:
+      - dashboard:/data
+    ports:
+      - '3000:80'
+  influxdb:
+    image: influxdb@sha256:b099bdd1f4306689fd11c02f83b3de7fc11eccd8debf5f345e9be11d0a7cd7dc
+    container_name: influxdb
+    environment: 
+      - INFLUXDB_DATA_DIR=/data
+    restart: always
+    volumes:
+      - influx:/data
